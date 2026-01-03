@@ -1,0 +1,5 @@
+vosk==0.3.45
+pyaudio==0.2.14
+gtts==2.5.0
+deep-translator==1.11.4
+pygame==2.5.2
