@@ -6,7 +6,7 @@ This tool captures system audio (everything playing on your computer), transcrib
 
 - Linux with PulseAudio/PipeWire
 - Python 3.8+
-- Internet connection (for translation and TTS)
+- ! Internet connection (for translation and TTS)
 - ffmpeg/ffprobe (for audio duration detection)
 
 ## Setup
@@ -69,7 +69,7 @@ Press `Ctrl+C` to stop the translation.
 
 1. **Audio Capture**: Uses `parec` to capture mono audio directly at 16kHz from PulseAudio monitor
 2. **Speech Recognition**: Vosk large model (1.8GB) transcribes English audio to text offline
-3. **Chunk Splitting**: Long transcriptions are split into 10-word chunks for faster feedback
+3. **Chunk Splitting**: Long transcriptions are split into 12-word chunks for faster feedback
 4. **Translation**: Google Translate API translates English chunks to Polish (requires internet)
 5. **Text-to-Speech**: gTTS generates Polish audio (requires internet)
 6. **Audio Ducking**: English audio is lowered to 30% volume while Polish plays
@@ -82,23 +82,20 @@ Press `Ctrl+C` to stop the translation.
 When Polish translation plays, the background English audio automatically lowers to 30% volume, then returns to 100% when finished. This makes the translation easy to hear without completely muting the source.
 
 ### Feedback Loop Prevention
-The system measures each Polish audio clip's duration and pauses transcription for that duration + 1 second buffer. This ensures the Polish audio is never captured and re-translated, even when headphones play to the same sink being monitored.
+The system measures each Polish audio clip's duration and pauses transcription for that duration plus a 60 second buffer (`BREAK_SECONDS`). This ensures the Polish audio is never captured and re-translated, even when headphones play to the same sink being monitored.
 
 ### Smart Chunking
-Long sentences are split into 10-word chunks, so you get shorter, more frequent Polish translations instead of waiting for entire paragraphs.
-
-### Noise Filtering
-Short transcriptions and background noise are filtered out to reduce unnecessary translations.
+Long sentences are split into 12-word chunks, so you get shorter, more frequent Polish translations instead of waiting for entire paragraphs.
 
 ## Configuration
 
 Edit `live_translate.py` to customize:
 
-- **Line 24**: `TARGET_LANGUAGE = "pl"` - Change translation target language
-- **Line 196**: `chunk_size = 10` - Adjust chunk size (5-15 words recommended)
-- **Line 276**: `duck_volume = "30%"` - Adjust ducking level (20-50% recommended)
-- **Line 22**: `VOSK_RATE = 16000` - Audio capture rate (matches Vosk model)
-- **Line 21**: `MODEL_PATH` - Path to Vosk model
+- **Line 25**: `TARGET_LANGUAGE = "pl"` - Change translation target language
+- **Line 223**: `chunk_size = 12` - Adjust chunk size (5-15 words recommended)
+- **Line 394**: `duck_volume = "30%"` - Adjust ducking level (20-50% recommended)
+- **Line 23**: `VOSK_RATE = 16000` - Audio capture rate (matches Vosk model)
+- **Line 22**: `MODEL_PATH` - Path to Vosk model
 
 ## Troubleshooting
 
@@ -118,12 +115,8 @@ These are harmless ALSA/PulseAudio compatibility warnings and can be ignored.
 
 ### Polish audio creates feedback loop
 The system should prevent this automatically. If it still occurs:
-- Check that `playback_sink = "easyeffects_sink"` (line 273) matches where your headphones are connected
-- The cooldown system should prevent re-capture, but you can increase the buffer on line 312
-
-### Translation errors
-- Check your internet connection (required for Google Translate and gTTS)
-- Translation and TTS are online services
+- Check that `playback_sink = "easyeffects_sink"` (line 393) matches where your headphones are connected
+- The cooldown system should prevent re-capture, but you can increase `BREAK_SECONDS` (line 27)
 
 ### Audio playback issues
 - Make sure your speakers/headphones are working
