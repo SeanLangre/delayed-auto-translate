@@ -322,22 +322,27 @@ def get_sink_inputs(sink_name):
         return []
 
 
-def get_firefox_sink_inputs():
-    """Get only Firefox sink-input IDs (for selective ducking)."""
+def get_ducked_sink_inputs():
+    """Get sink-input IDs for apps that should be ducked during playback."""
+    ducked_apps = ("firefox", "mpv")
+
+    def should_duck(application_name):
+        return any(app in application_name.lower() for app in ducked_apps)
+
     try:
         result = subprocess.run(['pactl', 'list', 'sink-inputs'],
                               capture_output=True, text=True, check=True)
 
-        firefox_inputs = []
+        ducked_inputs = []
         current_id = None
         current_name = None
 
         for line in result.stdout.split('\n'):
             line = line.strip()
             if line.startswith('Sink Input #'):
-                # Save previous entry if it was Firefox
-                if current_id and current_name and 'firefox' in current_name.lower():
-                    firefox_inputs.append(current_id)
+                # Save previous entry if it matches one of the ducked apps
+                if current_id and current_name and should_duck(current_name):
+                    ducked_inputs.append(current_id)
                 # Start new entry
                 current_id = line.split('#')[1]
                 current_name = None
@@ -345,10 +350,10 @@ def get_firefox_sink_inputs():
                 current_name = line.split('=')[1].strip().strip('"')
 
         # Don't forget the last entry
-        if current_id and current_name and 'firefox' in current_name.lower():
-            firefox_inputs.append(current_id)
+        if current_id and current_name and should_duck(current_name):
+            ducked_inputs.append(current_id)
 
-        return firefox_inputs
+        return ducked_inputs
     except:
         return []
 
@@ -381,7 +386,7 @@ def audio_playback_worker():
     """
     Worker thread to convert translated text to speech and play it.
     Measures audio duration to prevent capturing our own output.
-    Ducks (lowers) only Firefox audio during Polish playback, keeping game audio at full volume.
+    Ducks (lowers) Firefox and mpv audio during Polish playback, keeping other audio at full volume.
     """
     global running, playback_end_time
     # Play to Easy Effects sink (where headphones are)
@@ -413,16 +418,16 @@ def audio_playback_worker():
                     # Fallback: estimate based on text length (~15 chars per second)
                     audio_duration = len(text) / 15.0
 
-                # Get Firefox sink inputs only (for selective ducking)
-                firefox_inputs = get_firefox_sink_inputs()
+                # Get app sink inputs selected for ducking
+                ducked_inputs = get_ducked_sink_inputs()
 
                 # Store original volumes before ducking
                 original_volumes = {}
-                for sink_input in firefox_inputs:
+                for sink_input in ducked_inputs:
                     original_volumes[sink_input] = get_sink_input_volume(sink_input)
 
-                # Duck (lower) only Firefox audio, keep game audio at full volume
-                for sink_input in firefox_inputs:
+                # Duck (lower) selected apps, keep other audio at full volume
+                for sink_input in ducked_inputs:
                     subprocess.run(['pactl', 'set-sink-input-volume', sink_input, duck_volume],
                                  stderr=subprocess.DEVNULL)
 
@@ -437,8 +442,8 @@ def audio_playback_worker():
                     temp_file
                 ], check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
 
-                # Restore Firefox audio to original volumes
-                for sink_input in firefox_inputs:
+                # Restore ducked apps to original volumes
+                for sink_input in ducked_inputs:
                     original_volume = original_volumes.get(sink_input, '100%')
                     subprocess.run(['pactl', 'set-sink-input-volume', sink_input, original_volume],
                                  stderr=subprocess.DEVNULL)

@@ -1,6 +1,6 @@
 # Live Audio Translation: English to Polish
 
-This tool captures system audio (everything playing on your computer), transcribes it from English, translates to Polish, and plays the Polish audio in real-time.
+This tool captures system audio (everything playing on your computer), transcribes it from English, translates to Polish, and plays the Polish audio with a few seconds delay. It also lowers system audio while playing. 
 
 ## Requirements
 

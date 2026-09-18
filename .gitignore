@@ -1,3 +1,4 @@
 vosk-model-en-us-0.22/
 venv/**
 venv/bin/**
+__pycache__/live_translate.cpython-314.pyc
